@@ -1,24 +1,37 @@
 <template>
-  <main class="popup">
+  <main class="popup" :class="theme">
     <header class="header">
       <div>
         <p class="eyebrow">Saldo mensal</p>
         <h1>Horas trabalhadas</h1>
       </div>
-      <button class="icon-button" type="button" title="Atualizar" @click="refresh" :disabled="loading">
-        ↻
-      </button>
+      <div class="header-actions">
+        <button class="icon-button" type="button" :title="themeLabel" @click="toggleTheme">
+          {{ theme === "dark" ? "☀" : "☾" }}
+        </button>
+        <button class="icon-button" type="button" title="Atualizar" @click="refresh" :disabled="loading">
+          ↻
+        </button>
+      </div>
     </header>
 
     <section class="settings">
       <label class="field">
         <span>Carga permitida</span>
-        <input v-model="monthlyLimit" inputmode="numeric" placeholder="70:00" @change="saveSettings" />
+        <input
+          :value="monthlyLimit"
+          inputmode="numeric"
+          maxlength="6"
+          pattern="\d{1,3}:[0-5]\d"
+          placeholder="70:00"
+          @blur="saveSettings"
+          @input="updateMonthlyLimit"
+        />
       </label>
 
       <label class="check">
         <input v-model="settings.includeSaturday" type="checkbox" @change="saveSettings" />
-        <span>Considerar sabado</span>
+        <span>Considerar sábado</span>
       </label>
 
       <label class="check">
@@ -28,12 +41,12 @@
     </section>
 
     <p v-if="error" class="message error">{{ error }}</p>
-    <p v-else-if="loading" class="message">Lendo lancamentos da pagina...</p>
-    <p v-else-if="!summary" class="message">Nenhum dado encontrado na pagina atual.</p>
+    <p v-else-if="loading" class="message">Lendo lançamentos da página...</p>
+    <p v-else-if="!summary" class="message">Nenhum dado encontrado na página atual.</p>
 
     <section v-if="summary" class="metrics">
       <article class="metric">
-        <span>Ja feito</span>
+        <span>Já feito</span>
         <strong>{{ formatMinutes(summary.workedMinutes) }}</strong>
       </article>
       <article class="metric">
@@ -43,7 +56,7 @@
         </strong>
       </article>
       <article class="metric">
-        <span>Media por dia</span>
+        <span>Média por dia</span>
         <strong>{{ formatMinutes(summary.requiredDailyAverageMinutes) }}</strong>
       </article>
       <article class="metric">
@@ -53,7 +66,7 @@
     </section>
 
     <footer v-if="periodLabel" class="footer">
-      Competencia {{ periodLabel }}
+      Competência {{ periodLabel }}
     </footer>
   </main>
 </template>
@@ -66,15 +79,20 @@ import { inferPeriodFromEntries } from "~/domain/calendar"
 import { formatMinutes, parseTimeToMinutes } from "~/domain/time"
 import type { ExtractedWorkData, UserSettings, WorkSummary } from "~/types"
 
+type Theme = "dark" | "light"
+
 const storage = new Storage()
 const DEFAULT_SETTINGS: UserSettings = {
   monthlyLimitMinutes: 70 * 60,
   includeSaturday: false,
   includeSunday: false
 }
+const DEFAULT_THEME: Theme = "dark"
+const MAX_MONTHLY_LIMIT_MINUTES = 200 * 60
 
 const settings = reactive<UserSettings>({ ...DEFAULT_SETTINGS })
 const monthlyLimit = ref(formatMinutes(DEFAULT_SETTINGS.monthlyLimitMinutes))
+const theme = ref<Theme>(DEFAULT_THEME)
 const extractedData = ref<ExtractedWorkData | null>(null)
 const loading = ref(false)
 const error = ref("")
@@ -95,10 +113,23 @@ const periodLabel = computed(() => {
   return period ? `${String(period.month).padStart(2, "0")}/${period.year}` : ""
 })
 
+const themeLabel = computed(() => theme.value === "dark" ? "Usar tema claro" : "Usar tema escuro")
+
 onMounted(async () => {
+  await loadTheme()
   await loadSettings()
   await refresh()
 })
+
+async function loadTheme() {
+  const saved = await storage.get<Theme>("theme")
+  theme.value = saved === "light" ? "light" : DEFAULT_THEME
+}
+
+async function toggleTheme() {
+  theme.value = theme.value === "dark" ? "light" : "dark"
+  await storage.set("theme", theme.value)
+}
 
 async function loadSettings() {
   const saved = await storage.get<UserSettings>("settings")
@@ -107,8 +138,8 @@ async function loadSettings() {
 }
 
 async function saveSettings() {
-  const parsedLimit = parseTimeToMinutes(monthlyLimit.value)
-  if (parsedLimit === null || parsedLimit <= 0) {
+  const parsedLimit = parseMonthlyLimit(monthlyLimit.value)
+  if (parsedLimit === null) {
     monthlyLimit.value = formatMinutes(settings.monthlyLimitMinutes)
     return
   }
@@ -118,6 +149,54 @@ async function saveSettings() {
   await storage.set("settings", { ...settings })
 }
 
+function updateMonthlyLimit(event: Event) {
+  const input = event.target as HTMLInputElement
+  monthlyLimit.value = maskMonthlyLimit(input.value)
+  input.value = monthlyLimit.value
+}
+
+function maskMonthlyLimit(value: string) {
+  const [rawHours = "", rawMinutes = ""] = value.replace(/[^\d:]/g, "").split(":", 2)
+  const hoursText = rawHours.replace(/\D/g, "").slice(0, 3)
+  const hasSeparator = value.includes(":")
+  let minutesText = rawMinutes.replace(/\D/g, "").slice(0, 2)
+
+  if (minutesText.length > 0 && Number(minutesText[0]) > 5) {
+    minutesText = `5${minutesText.slice(1)}`
+  }
+
+  if (hoursText === "") {
+    return ""
+  }
+
+  const hours = Math.min(Number(hoursText), 200)
+  const normalizedHours = String(hours)
+
+  if (hours === 200) {
+    return hasSeparator ? "200:00" : "200"
+  }
+
+  if (!hasSeparator) {
+    return normalizedHours
+  }
+
+  return `${normalizedHours}:${minutesText}`
+}
+
+function parseMonthlyLimit(value: string) {
+  if (!/^\d{1,3}:[0-5]\d$/.test(value)) {
+    return null
+  }
+
+  const parsedLimit = parseTimeToMinutes(value)
+
+  if (parsedLimit === null || parsedLimit <= 0 || parsedLimit > MAX_MONTHLY_LIMIT_MINUTES) {
+    return null
+  }
+
+  return parsedLimit
+}
+
 async function refresh() {
   loading.value = true
   error.value = ""
@@ -125,13 +204,13 @@ async function refresh() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
     if (!tab?.id) {
-      throw new Error("Nao foi possivel identificar a aba ativa.")
+      throw new Error("Não foi possível identificar a aba ativa.")
     }
 
     extractedData.value = await chrome.tabs.sendMessage(tab.id, { type: "READ_WORK_ENTRIES" })
   } catch {
     extractedData.value = null
-    error.value = "Nao consegui ler a pagina atual. Recarregue a pagina e tente novamente."
+    error.value = "Não consegui ler a página atual. Recarregue a página e tente novamente."
   } finally {
     loading.value = false
   }
@@ -146,12 +225,24 @@ body {
 
 <style scoped>
 .popup {
+  --color-background: #111820;
+  --color-surface: #18212b;
+  --color-surface-strong: #202c38;
+  --color-border: #334353;
+  --color-text: #edf2f7;
+  --color-text-muted: #a8b3c2;
+  --color-text-soft: #c6d0dc;
+  --color-positive: #4fd18b;
+  --color-error-border: #8c3f3b;
+  --color-error-text: #ffd0cd;
+  --color-error-background: #321b1d;
+
   width: 360px;
   min-height: 440px;
   box-sizing: border-box;
   padding: 18px;
-  color: #17202a;
-  background: #f7f8fa;
+  color: var(--color-text);
+  background: var(--color-background);
   font-family:
     Inter,
     ui-sans-serif,
@@ -162,6 +253,20 @@ body {
     sans-serif;
 }
 
+.popup.light {
+  --color-background: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-surface-strong: #ffffff;
+  --color-border: #c8d1dc;
+  --color-text: #17202a;
+  --color-text-muted: #5d6d7e;
+  --color-text-soft: #34495e;
+  --color-positive: #137a45;
+  --color-error-border: #f2b8b5;
+  --color-error-text: #8a1f17;
+  --color-error-background: #fff5f5;
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -170,9 +275,14 @@ body {
   margin-bottom: 18px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .eyebrow {
   margin: 0 0 4px;
-  color: #5d6d7e;
+  color: var(--color-text-muted);
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -187,10 +297,10 @@ h1 {
 .icon-button {
   width: 36px;
   height: 36px;
-  border: 1px solid #c8d1dc;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  color: #17202a;
-  background: #ffffff;
+  color: var(--color-text);
+  background: var(--color-surface);
   cursor: pointer;
   font-size: 18px;
 }
@@ -209,7 +319,7 @@ h1 {
 .field {
   display: grid;
   gap: 6px;
-  color: #34495e;
+  color: var(--color-text-soft);
   font-size: 13px;
   font-weight: 700;
 }
@@ -217,11 +327,11 @@ h1 {
 .field input {
   box-sizing: border-box;
   width: 100%;
-  border: 1px solid #c8d1dc;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 10px 12px;
-  color: #17202a;
-  background: #ffffff;
+  color: var(--color-text);
+  background: var(--color-surface);
   font-size: 16px;
 }
 
@@ -229,7 +339,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #2c3e50;
+  color: var(--color-text-soft);
   font-size: 14px;
 }
 
@@ -240,18 +350,18 @@ h1 {
 
 .message {
   margin: 14px 0;
-  border: 1px solid #d8dee6;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 12px;
-  color: #415164;
-  background: #ffffff;
+  color: var(--color-text-soft);
+  background: var(--color-surface);
   font-size: 14px;
 }
 
 .error {
-  border-color: #f2b8b5;
-  color: #8a1f17;
-  background: #fff5f5;
+  border-color: var(--color-error-border);
+  color: var(--color-error-text);
+  background: var(--color-error-background);
 }
 
 .metrics {
@@ -265,32 +375,32 @@ h1 {
   gap: 8px;
   min-height: 82px;
   box-sizing: border-box;
-  border: 1px solid #d8dee6;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 12px;
-  background: #ffffff;
+  background: var(--color-surface-strong);
 }
 
 .metric span {
-  color: #5d6d7e;
+  color: var(--color-text-muted);
   font-size: 12px;
   font-weight: 700;
 }
 
 .metric strong {
   align-self: end;
-  color: #17202a;
+  color: var(--color-text);
   font-size: 24px;
   line-height: 1;
 }
 
 .metric strong.positive {
-  color: #137a45;
+  color: var(--color-positive);
 }
 
 .footer {
   margin-top: 14px;
-  color: #5d6d7e;
+  color: var(--color-text-muted);
   font-size: 12px;
   text-align: center;
 }
