@@ -1,0 +1,12 @@
+node_modules
+.plasmo
+build
+*.zip
+dist
+coverage
+.turbo
+.cache
+.parcel-cache
+*.tsbuildinfo
+.DS_Store
+site.png

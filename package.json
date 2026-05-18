@@ -1,0 +1,50 @@
+{
+  "name": "saldo-horas-extension",
+  "version": "0.1.0",
+  "description": "Extensão Chrome para calcular saldo mensal de horas trabalhadas.",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.1.2",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package",
+    "test": "vitest run",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@plasmohq/storage": "^1.15.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.42",
+    "@types/node": "^25.8.0",
+    "@vue/compiler-sfc": "^3.5.0",
+    "esbuild": "^0.28.0",
+    "plasmo": "^0.90.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.6",
+    "vue-tsc": "^3.3.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@swc/core",
+      "esbuild",
+      "lmdb",
+      "msgpackr-extract",
+      "sharp"
+    ]
+  },
+  "manifest": {
+    "name": "Saldo de Horas",
+    "description": "Calcula saldo mensal de horas a partir dos lancamentos da pagina.",
+    "permissions": [
+      "activeTab",
+      "storage"
+    ],
+    "host_permissions": [
+      "https://backoffice.deeprocket.com.br/*"
+    ]
+  }
+}
