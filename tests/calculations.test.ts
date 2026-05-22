@@ -13,8 +13,8 @@ describe("calculateWorkSummary", () => {
   it("calculates remaining average for business days", () => {
     const summary = calculateWorkSummary([], period, settings, new Date(2026, 5, 1))
 
-    expect(summary.remainingDays).toBe(21)
-    expect(summary.requiredDailyAverageMinutes).toBe(200)
+    expect(summary.remainingDays).toBe(22)
+    expect(summary.requiredDailyAverageMinutes).toBe(191)
   })
 
   it("reduces the average when a long day is already worked", () => {
@@ -23,8 +23,8 @@ describe("calculateWorkSummary", () => {
 
     expect(summary.workedMinutes).toBe(480)
     expect(summary.remainingMinutes).toBe(3720)
-    expect(summary.remainingDays).toBe(20)
-    expect(summary.requiredDailyAverageMinutes).toBe(186)
+    expect(summary.remainingDays).toBe(21)
+    expect(summary.requiredDailyAverageMinutes).toBe(178)
   })
 
   it("shows positive balance after exceeding the target", () => {
@@ -40,13 +40,22 @@ describe("calculateWorkSummary", () => {
     const weekendSettings = { ...settings, includeSaturday: true, includeSunday: true }
     const summary = calculateWorkSummary([], period, weekendSettings, new Date(2026, 5, 1))
 
-    expect(summary.remainingDays).toBe(29)
+    expect(summary.remainingDays).toBe(30)
   })
 
-  it("does not count today when Saturday is enabled", () => {
+  it("counts today when it has no entry yet", () => {
     const mayPeriod: WorkPeriod = { year: 2026, month: 5 }
     const saturdaySettings = { ...settings, includeSaturday: true }
     const summary = calculateWorkSummary([], mayPeriod, saturdaySettings, new Date(2026, 4, 18))
+
+    expect(summary.remainingDays).toBe(12)
+  })
+
+  it("does not count today when it already has an entry", () => {
+    const mayPeriod: WorkPeriod = { year: 2026, month: 5 }
+    const saturdaySettings = { ...settings, includeSaturday: true }
+    const entries: WorkEntry[] = [{ date: "2026-05-18", workedMinutes: 8 * 60 }]
+    const summary = calculateWorkSummary(entries, mayPeriod, saturdaySettings, new Date(2026, 4, 18))
 
     expect(summary.remainingDays).toBe(11)
   })

@@ -23,7 +23,7 @@ Exemplo: se a carga permitida for `70:00` no mês e ainda existirem 22 dias úte
   - saldo positivo quando passar da carga permitida;
   - média necessária por dia;
   - quantidade de dias restantes.
-- O dia atual não entra no cálculo de dias restantes.
+- O dia atual entra no cálculo de dias restantes quando ainda não existe lançamento para hoje. Se já houver lançamento na data atual, a contagem começa no próximo dia considerado.
 - Feriados ainda não são considerados.
 
 ## Stack

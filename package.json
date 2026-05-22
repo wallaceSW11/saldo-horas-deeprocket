@@ -1,6 +1,6 @@
 {
   "name": "saldo-horas-extension",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Extensão Chrome para calcular saldo mensal de horas trabalhadas.",
   "private": true,
   "type": "module",

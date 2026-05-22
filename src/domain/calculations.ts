@@ -13,6 +13,7 @@ export function calculateWorkSummary(
   const extraMinutes = Math.max(-balanceMinutes, 0)
   const remainingDays = getRemainingWorkDays({
     period,
+    entries,
     includeSaturday: settings.includeSaturday,
     includeSunday: settings.includeSunday,
     today

@@ -2,6 +2,7 @@ import type { WorkEntry, WorkPeriod } from "~/types"
 
 export type RemainingDayOptions = {
   period: WorkPeriod
+  entries?: WorkEntry[]
   includeSaturday: boolean
   includeSunday: boolean
   today?: Date
@@ -19,8 +20,12 @@ export function getRemainingWorkDays(options: RemainingDayOptions): number {
     return 0
   }
 
+  const hasEntryToday = Boolean(
+    options.entries?.some((entry) => entry.date === formatDateKey(todayAtMidnight))
+  )
+  const currentPeriodStartDay = hasEntryToday ? todayAtMidnight.getDate() + 1 : todayAtMidnight.getDate()
   const startDate = isCurrentPeriod
-    ? new Date(todayAtMidnight.getFullYear(), todayAtMidnight.getMonth(), todayAtMidnight.getDate() + 1)
+    ? new Date(todayAtMidnight.getFullYear(), todayAtMidnight.getMonth(), currentPeriodStartDay)
     : new Date(options.period.year, periodMonthIndex, 1)
 
   if (startDate > endDate) {
@@ -62,4 +67,12 @@ function isAllowedWeekday(date: Date, includeSaturday: boolean, includeSunday: b
   }
 
   return true
+}
+
+function formatDateKey(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+
+  return `${year}-${month}-${day}`
 }
