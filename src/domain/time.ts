@@ -18,6 +18,12 @@ export function parseTimeToMinutes(input: string): number | null {
     return Number(hourTextMatch[1]) * HOUR_MINUTES + minutes
   }
 
+  const minuteTextMatch = normalized.match(/^(\d{1,2})\s*m(?:in(?:utos?)?)?$/)
+  if (minuteTextMatch) {
+    const minutes = Number(minuteTextMatch[1])
+    return minutes <= 59 ? minutes : null
+  }
+
   return null
 }
 

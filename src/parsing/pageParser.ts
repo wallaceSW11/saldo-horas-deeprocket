@@ -3,7 +3,8 @@ import { inferPeriodFromEntries } from "~/domain/calendar"
 import { parseTimeToMinutes } from "~/domain/time"
 
 const DATE_PATTERN = /\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?\b/
-const TIME_PATTERN = /\b(\d{1,4}:[0-5]\d|\d{1,4}\s*h(?:oras?)?(?:\s*\d{1,2}\s*m(?:in(?:utos?)?)?)?)\b/i
+const TIME_PATTERN =
+  /\b(\d{1,4}:[0-5]\d|\d{1,4}\s*h(?:oras?)?(?:\s*\d{1,2}\s*m(?:in(?:utos?)?)?)?|\d{1,2}\s*m(?:in(?:utos?)?)?)\b/i
 const MONTH_YEAR_PATTERN = /\b(?:compet[eê]ncia|periodo|per[ií]odo|m[eê]s)\D{0,20}(\d{1,2})[\/.-](\d{4})\b/i
 const MONTH_NAME_YEAR_PATTERN =
   /\b(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+de\s+(\d{4})\b/i

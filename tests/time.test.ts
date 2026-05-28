@@ -13,8 +13,15 @@ describe("time helpers", () => {
     expect(parseTimeToMinutes("8h 30m")).toBe(510)
   })
 
+  it("parses textual minute-only values", () => {
+    expect(parseTimeToMinutes("45min")).toBe(45)
+    expect(parseTimeToMinutes("45 min")).toBe(45)
+    expect(parseTimeToMinutes("45 minutos")).toBe(45)
+  })
+
   it("rejects invalid values", () => {
     expect(parseTimeToMinutes("8:90")).toBeNull()
+    expect(parseTimeToMinutes("75min")).toBeNull()
     expect(parseTimeToMinutes("abc")).toBeNull()
   })
 
